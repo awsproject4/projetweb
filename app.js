@@ -1,10 +1,17 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database("./database.db");
-
+const session = require("express-session");
 const app = express();
 PORT = 3000;
 
+app.use(
+  session({
+    secret: "secret-key",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
 
 
 // Création des tables
@@ -58,6 +65,28 @@ app.post("/signup", async (req, res) => {
     [username, hash],
     (err) => {
       if (err) return res.send("Utilisateur déjà existant");
+      res.redirect("/");
+    }
+  );
+});
+
+app.post("/login", (req, res) => {
+  //Récupérer les données du formulaire
+  const { username, password } = req.body;
+    //chercher l'utilisateur dans la base
+  db.get(
+    "SELECT * FROM users WHERE username = ?",
+    [username],
+    async (err, user) => {
+       //si lutilisateur n'existe pas
+      if (!user) return res.send("Utilisateur introuvable");
+
+      const match = await bcrypt.compare(password, user.password);
+      //verifier le mot de passe
+      if (!match) return res.send("Mot de passe incorrect");
+        //stocker l'utilisateur dans la session
+      req.session.user = user;
+        //Rediriger vers la page principale
       res.redirect("/");
     }
   );
