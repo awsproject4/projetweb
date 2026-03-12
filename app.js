@@ -152,6 +152,27 @@ app.post("/ajouter", (req, res) => {
   );
 });
 
+// Supprimer un post-it
+app.post("/effacer", (req, res) => {
+
+  if (!req.session.user)
+    return res.json({ success: false });
+
+  const { id } = req.body;
+
+  // Vérifie que le post-it appartient à l'utilisateur
+  db.run(
+    "DELETE FROM messages WHERE id = ? AND auteur_id = ?",
+    [id, req.session.user.id],
+    function () {
+      res.json({ success: this.changes > 0 });
+    }
+  );
+});
+
+// =============================
+// LANCEMENT SERVEUR
+// =============================
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
