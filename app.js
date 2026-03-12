@@ -170,6 +170,24 @@ app.post("/effacer", (req, res) => {
   );
 });
 
+// Liste des post-it
+app.get("/liste", (req, res) => {
+
+  db.all(
+    `SELECT messages.*, users.username
+     FROM messages
+     JOIN users ON messages.auteur_id = users.id
+     ORDER BY date_creation ASC`,
+    [],
+    (err, rows) => {
+      res.json({
+        user: req.session.user || null,
+        messages: rows
+      });
+    }
+  );
+});
+
 // =============================
 // LANCEMENT SERVEUR
 // =============================
