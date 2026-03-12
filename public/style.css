@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+  overflow: hidden; /* évite scrollbars */
+  background: white;
+  font-family: Arial;
+}
+
+#board {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.postit {
+  position: absolute;
+  width: 150px;
+  background: yellow;
+  padding: 10px;
+  box-shadow: 2px 2px 5px gray;
+}
+
+.delete {
+  background: red;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
