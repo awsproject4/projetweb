@@ -1,6 +1,7 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database("./database.db");
+//J’utilise express-session pour gérer l’authentification côté serveur.
 const session = require("express-session");
 const app = express();
 PORT = 3000;
@@ -90,6 +91,12 @@ app.post("/login", (req, res) => {
       res.redirect("/");
     }
   );
+});
+
+app.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/");
+  });
 });
 
 app.listen(PORT, () => {
