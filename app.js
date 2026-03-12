@@ -42,7 +42,8 @@ db.serialize(() => {
 });
 
 app.get("/", (req, res) => {
-    res.send("Serveur fonctionne");
+    //res.send("Serveur fonctionne");
+    res.sendFile(path.join(__dirname, "views/index.html"));
 });
 
 const path = require("path");
