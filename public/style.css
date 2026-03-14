@@ -13,10 +13,11 @@ body {
 
 .postit {
   position: absolute;
-  width: 150px;
   background: yellow;
   padding: 10px;
+  width: 150px;
   box-shadow: 2px 2px 5px gray;
+  cursor: pointer;
 }
 
 .delete {

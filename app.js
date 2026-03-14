@@ -27,11 +27,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 // Gestion des sessions (authentification)
 app.use(
-  session({
-    secret: "secret-key",
-    resave: false,
-    saveUninitialized: false,
-  })
+session({
+secret: "secret-key",
+resave: false,
+saveUninitialized: false,
+cookie: {
+httpOnly: true,
+sameSite: "strict"
+}
+})
 );
 
 
@@ -86,6 +90,10 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
 
   const { username, password } = req.body;
+  if(!username || !password){
+  return res.send("Champs invalides");
+  }
+
   // Hachage du mot de passe
   const hash = await bcrypt.hash(password, 10);
 
@@ -137,10 +145,12 @@ app.post("/ajouter", (req, res) => {
 
   //Vérifie que l'utilisateur est connecté
   if (!req.session.user)
-    return res.json({ success: false });
+    return res.status(401).json({ success: false });
 
   const { texte, x, y } = req.body;
-
+  if(!texte || texte.length > 500){
+  return res.json({success:false});
+  }
   db.run(
     "INSERT INTO messages (texte, x, y, auteur_id) VALUES (?, ?, ?, ?)",
     [texte, x, y, req.session.user.id],
@@ -156,7 +166,7 @@ app.post("/ajouter", (req, res) => {
 app.post("/effacer", (req, res) => {
 
   if (!req.session.user)
-    return res.json({ success: false });
+    return res.status(401).json({ success: false });
 
   const { id } = req.body;
 
@@ -177,7 +187,7 @@ app.get("/liste", (req, res) => {
     `SELECT messages.*, users.username
      FROM messages
      JOIN users ON messages.auteur_id = users.id
-     ORDER BY date_creation ASC`,
+     ORDER BY date_creation DESC`,
     [],
     (err, rows) => {
       res.json({
