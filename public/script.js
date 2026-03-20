@@ -83,7 +83,7 @@ async function loadData() {
       // BOUTON SUPPRIMER
       // ======================
 
-      if (data.user && data.user.id === msg.auteur_id) {
+      if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
         const btn = document.createElement("button");
         btn.textContent = "X";
@@ -98,7 +98,7 @@ async function loadData() {
       // ======================
       // BOUTON MODIFIER POST-IT
       // ======================
-      if (data.user && data.user.id === msg.auteur_id) {
+      if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
         const editBtn = document.createElement("button");
         editBtn.textContent = "✏️";

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Administrateur</title>
+</head>
+
+<body>
+
+<h1>Admin</h1>
+
+<!-- =============================
+TABLEAU DES UTILISATEURS
+============================= -->
+<table border="1" cellpadding="10">
+  <thead>
+    <tr>
+      <th>Utilisateur</th>
+      <th>Rôle</th>
+      <th>Créer</th>
+      <th>Modifier</th>
+      <th>Supprimer</th>
+    </tr>
+  </thead>
+
+  <!-- zone dynamique remplie en JS -->
+  <tbody id="users"></tbody>
+</table>
+
+<script>
+
+// =============================
+// CHARGER LES UTILISATEURS
+// =============================
+async function loadUsers() {
+
+  // appel API sécurisé (admin uniquement côté serveur)
+  const res = await fetch("/admin/users");
+  const users = await res.json();
+
+  const tbody = document.getElementById("users");
+
+  // on vide le tableau avant de recharger
+  tbody.innerHTML = "";
+
+  // boucle sur chaque utilisateur
+  users.forEach(u => {
+
+    const row = document.createElement("tr");
+
+    // innerHTML ici ok car données contrôlées côté serveur
+    row.innerHTML = `
+      <td>${u.username}</td>
+
+      <!-- =============================
+      ROLE (user / admin)
+      ============================= -->
+      <td>
+        <select onchange="setRole(${u.id}, this.value)">
+          <option value="user" ${u.role==='user'?'selected':''}>User</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+      </td>
+
+      <!-- =============================
+      PERMISSIONS
+      ============================= -->
+
+      <!-- création -->
+      <td>
+        <input type="checkbox"
+          ${u.can_create ? 'checked' : ''}
+          onchange="setPerm(${u.id}, 'can_create', this.checked)">
+      </td>
+
+      <!-- modification -->
+      <td>
+        <input type="checkbox"
+          ${u.can_edit ? 'checked' : ''}
+          onchange="setPerm(${u.id}, 'can_edit', this.checked)">
+      </td>
+
+      <!-- suppression -->
+      <td>
+        <input type="checkbox"
+          ${u.can_delete ? 'checked' : ''}
+          onchange="setPerm(${u.id}, 'can_delete', this.checked)">
+      </td>
+    `;
+
+    tbody.appendChild(row);
+  });
+}
+
+// =============================
+// CHANGER LE ROLE
+// =============================
+async function setRole(id, role) {
+
+  // appel API pour modifier le rôle
+  await fetch("/admin/role", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ id, role })
+  });
+
+  // recharge pour mettre à jour l'affichage
+  loadUsers();
+}
+
+// =============================
+// CHANGER UNE PERMISSION
+// =============================
+async function setPerm(id, perm, value) {
+
+  await fetch("/admin/permission", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      id,
+      perm,
+      value
+    })
+  });
+
+}
+
+// chargement initial
+loadUsers();
+
+</script>
+
+</body>
+</html>

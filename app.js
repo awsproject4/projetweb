@@ -7,12 +7,16 @@ const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
+
 // =============================
 // INITIALISATION
 // =============================
 const app = express();
 PORT = 3000;
 const db = new sqlite3.Database("./database.db");
+
+
+
 // =============================
 // MIDDLEWARES
 // =============================
@@ -38,6 +42,43 @@ sameSite: "strict"
 })
 );
 
+// =============================
+// MIDDLEWARE AVANCE
+// =============================
+
+// Vérifie connexion
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ success: false });
+  }
+  next();
+}
+
+// Cette fonction permet de vérifier dynamiquement une permission
+function requirePermission(permission) {
+  return (req, res, next) => {
+
+    const user = req.session.user;
+
+    // admin → accès total
+    if (user.role === "admin") return next();
+
+    // sinon vérifier permission(Si la permission est absente → accès refusé)
+    if (!user[permission]) {
+      return res.status(403).json({ success: false });
+    }
+
+    next();
+  };
+}
+
+// Vérifie que l'utilisateur est admin
+function requireAdmin(req, res, next) {
+  if (!req.session.user || req.session.user.role !== "admin") {
+    return res.status(403).send("Accès refusé");
+  }
+  next();
+}
 
 // =============================
 // CREATION DES TABLES SQL
@@ -101,6 +142,8 @@ app.post("/signup", async (req, res) => {
   // Hachage du mot de passe
   const hash = await bcrypt.hash(password, 10);
 
+  
+
   db.run(
     "INSERT INTO users (username, password) VALUES (?, ?)",
     [username, hash],
@@ -145,13 +188,13 @@ app.get("/logout", (req, res) => {
 // ROUTES API (AJAX)
 // =============================
 // Ajouter un post-it
-app.post("/ajouter", (req, res) => {
-
-  //Vérifie que l'utilisateur est connecté
-  if (!req.session.user)
-    return res.status(401).json({ success: false });
+app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+  requirePermission("can_create"),//Vérifie que l'utilisateur a le droit de creer
+  (req, res) => {
 
   const { texte, x, y } = req.body;
+  
+
   if(!texte || texte.length > 500){
   return res.json({success:false});
   }
@@ -167,21 +210,28 @@ app.post("/ajouter", (req, res) => {
 });
 
 // Supprimer un post-it
-app.post("/effacer", (req, res) => {
-
-  if (!req.session.user)
-    return res.status(401).json({ success: false });
-
+app.post("/effacer", requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+  requirePermission("can_delete"),//Vérifie que l'utilisateur a le droit de supprimer
+  (req, res) => {
   const { id } = req.body;
+  const user = req.session.user;
+  // CAS ADMIN
+  // Un administrateur peut supprimer n'importe quel post-it
+  if (user.role === "admin") {
+    db.run("DELETE FROM messages WHERE id = ?", [id],
+      () => res.json({ success: true })
+    );
+  } else {
 
   // Vérifie que le post-it appartient à l'utilisateur
-  db.run(
-    "DELETE FROM messages WHERE id = ? AND auteur_id = ?",
-    [id, req.session.user.id],
-    function () {
-      res.json({ success: this.changes > 0 });
-    }
-  );
+    db.run(
+      "DELETE FROM messages WHERE id = ? AND auteur_id = ?",
+      [id, req.session.user.id],
+      function () {
+        res.json({ success: this.changes > 0 });
+      }
+    );
+  }
 });
 
 // Liste des post-it
@@ -208,15 +258,15 @@ app.get("/liste", (req, res) => {
 // =============================
 // MODIFIER UN POST-IT
 // =============================
-app.post("/modifier", (req, res) => {
+app.post("/modifier",requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+  requirePermission("can_edit"),//Vérifie que l'utilisateur a le droit de modifier
+  (req, res) => {
 
-  // Vérifie que l'utilisateur est connecté (sécurité session)
-  if (!req.session.user) {
-    return res.status(401).json({ success: false });
-  }
+  
 
   // Récupération des données envoyées en AJAX
   const { id, texte } = req.body;
+  const user = req.session.user;
 
   // Validation des données (évite bugs + abus)
   if (!texte || texte.length > 500) {
@@ -225,13 +275,21 @@ app.post("/modifier", (req, res) => {
 
   // Requête SQL sécurisée :
   // - On met à jour le texte
-  // - MAIS seulement si l'utilisateur est le propriétaire du post-it
-  db.run(
-    `UPDATE messages 
-     SET texte = ? 
-     WHERE id = ? AND auteur_id = ?`,
-    [texte, id, req.session.user.id],
-    function (err) {
+  // - MAIS seulement si l'utilisateur est le propriétaire du post-it et ADMIN : peut modifier tous les post-it
+  if (user.role === "admin") {
+      db.run(
+        "UPDATE messages SET texte = ? WHERE id = ?",
+        [texte, id],
+        () => res.json({ success: true })
+      );
+  } else {
+    // USER → seulement ses posts
+    db.run(
+      `UPDATE messages 
+      SET texte = ? 
+      WHERE id = ? AND auteur_id = ?`,
+      [texte, id, req.session.user.id],
+      function (err) {
 
       // En cas d'erreur SQL
       if (err) {
@@ -241,8 +299,65 @@ app.post("/modifier", (req, res) => {
       // this.changes = nombre de lignes modifiées
       // → 0 = refus (pas propriétaire)
       // → 1 = succès
-      res.json({ success: this.changes > 0 });
-    }
+      res.json({ success: this.changes > 0 });}
+    );  
+  }
+
+});
+
+// =============================
+// PAGE ADMIN (PROTEGEE)
+// =============================
+app.get("/admin", requireAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, "views/admin.html"));
+});
+
+// =============================
+// LISTE UTILISATEURS (ADMIN)
+// =============================
+app.get("/admin/users", requireAdmin, (req, res) => {
+
+  db.all("SELECT id, username, role, can_create, can_edit, can_delete FROM users", [], (err, rows) => {
+    res.json(rows);
+  });
+
+});
+
+// =============================
+// MODIFICATION DES DROITS UTILISATEUR
+// =============================
+app.post("/admin/permission", requireAdmin, (req, res) => {
+
+  const { id, perm, value } = req.body;
+
+  // securité: On limite les permissions modifiables pour éviter une injection SQL
+  const allowed = ["can_create", "can_edit", "can_delete"];
+
+  if (!allowed.includes(perm)) {
+    return res.json({ success: false });
+  }
+
+  // Mise à jour sécurisée
+  db.run(
+    `UPDATE users SET ${perm} = ? WHERE id = ?`,
+    [value ? 1 : 0, id],
+    () => res.json({ success: true })
+  );
+
+});
+
+app.post("/admin/role", requireAdmin, (req, res) => {
+
+  const { id, role } = req.body;
+
+  if (!["user", "admin"].includes(role)) {
+    return res.json({ success: false });
+  }
+
+  db.run(
+    "UPDATE users SET role = ? WHERE id = ?",
+    [role, id],
+    () => res.json({ success: true })
   );
 
 });
