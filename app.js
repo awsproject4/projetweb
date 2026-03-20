@@ -94,6 +94,10 @@ app.post("/signup", async (req, res) => {
   return res.send("Champs invalides");
   }
 
+  if(username.length > 50 || password.length > 100){
+    return res.send("Données trop longues");
+}
+
   // Hachage du mot de passe
   const hash = await bcrypt.hash(password, 10);
 
@@ -196,6 +200,51 @@ app.get("/liste", (req, res) => {
       });
     }
   );
+});
+
+// =============================
+// Modules supplémentaires
+// =============================
+// =============================
+// MODIFIER UN POST-IT
+// =============================
+app.post("/modifier", (req, res) => {
+
+  // Vérifie que l'utilisateur est connecté (sécurité session)
+  if (!req.session.user) {
+    return res.status(401).json({ success: false });
+  }
+
+  // Récupération des données envoyées en AJAX
+  const { id, texte } = req.body;
+
+  // Validation des données (évite bugs + abus)
+  if (!texte || texte.length > 500) {
+    return res.json({ success: false });
+  }
+
+  // Requête SQL sécurisée :
+  // - On met à jour le texte
+  // - MAIS seulement si l'utilisateur est le propriétaire du post-it
+  db.run(
+    `UPDATE messages 
+     SET texte = ? 
+     WHERE id = ? AND auteur_id = ?`,
+    [texte, id, req.session.user.id],
+    function (err) {
+
+      // En cas d'erreur SQL
+      if (err) {
+        return res.json({ success: false });
+      }
+
+      // this.changes = nombre de lignes modifiées
+      // → 0 = refus (pas propriétaire)
+      // → 1 = succès
+      res.json({ success: this.changes > 0 });
+    }
+  );
+
 });
 
 // =============================

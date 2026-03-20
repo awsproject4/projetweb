@@ -26,3 +26,9 @@ body {
   border: none;
   cursor: pointer;
 }
+.edit {
+  background: orange;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+}

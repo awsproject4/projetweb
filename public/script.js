@@ -95,6 +95,42 @@ async function loadData() {
 
       }
 
+      // ======================
+      // BOUTON MODIFIER POST-IT
+      // ======================
+      if (data.user && data.user.id === msg.auteur_id) {
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏️";
+        editBtn.className = "edit";
+
+        editBtn.onclick = async () => {
+
+          // Demande à l'utilisateur le nouveau texte
+          const nouveauTexte = prompt("Modifier le post-it :", msg.texte);
+
+          // Vérifie que le texte n'est pas vide
+          if (!nouveauTexte || nouveauTexte.trim() === "") return;
+
+          // Envoi de la requête AJAX au serveur
+          await fetch("/modifier", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              id: msg.id,
+              texte: nouveauTexte
+            })
+          });
+
+          // Recharge les post-it pour afficher la modification
+          loadData();
+        };
+
+        div.appendChild(editBtn);
+      }
+
       board.appendChild(div);
 
     });
