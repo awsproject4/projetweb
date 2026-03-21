@@ -15,7 +15,24 @@ const app = express();
 PORT = 3000;
 const db = new sqlite3.Database("./database.db");
 
+// =============================
+// SOCKET.IO
+// =============================
+const http = require("http");
+const server = http.createServer(app);
+const { Server } = require("socket.io");
 
+const io = new Server(server);
+
+// connexion client
+io.on("connection", (socket) => {
+  console.log("Un utilisateur connecté");
+
+  // rejoindre un tableau spécifique
+  socket.on("joinBoard", (boardId) => {
+    socket.join(boardId);
+  });
+});
 
 // =============================
 // MIDDLEWARES
@@ -205,6 +222,8 @@ app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non con
     [texte, x, y, req.session.user.id, board_id],
     function (err) {
       if (err) return res.json({ success: false });
+      // MPORTANT : après insertion
+      io.to(board_id).emit("updateBoard");
       // Réponse pour AJAX
       res.json({ success: true });
     }
@@ -219,21 +238,33 @@ app.post("/effacer", requireAuth,//Sécurité : empêche les utilisateurs non co
   const user = req.session.user;
   // CAS ADMIN
   // Un administrateur peut supprimer n'importe quel post-it
-  if (user.role === "admin") {
-    db.run("DELETE FROM messages WHERE id = ?", [id],
-      () => res.json({ success: true })
-    );
-  } else {
+  // 1. récupérer le board_id
+  db.get("SELECT board_id FROM messages WHERE id = ?", [id], (err, row) => {
+    if (!row) return res.json({ success: false });
 
-  // Vérifie que le post-it appartient à l'utilisateur
-    db.run(
-      "DELETE FROM messages WHERE id = ? AND auteur_id = ?",
-      [id, req.session.user.id],
-      function () {
-        res.json({ success: this.changes > 0 });
-      }
-    );
-  }
+    const board_id = row.board_id;
+    if (user.role === "admin") {
+      db.run("DELETE FROM messages WHERE id = ?", [id],function() {
+        // après suppression
+        io.to(board_id).emit("updateBoard");
+        res.json({ success: true })}
+      );
+    } else {
+
+    // Vérifie que le post-it appartient à l'utilisateur
+      db.run(
+        "DELETE FROM messages WHERE id = ? AND auteur_id = ?",
+        [id, req.session.user.id],
+        function () {
+          // seulement si suppression réussie
+          if (this.changes > 0) {
+            io.to(board_id).emit("updateBoard");
+          }
+          res.json({ success: this.changes > 0 });
+        }
+      );
+    }
+  });
 });
 
 // Liste des post-it
@@ -280,32 +311,44 @@ app.post("/modifier",requireAuth,//Sécurité : empêche les utilisateurs non co
   // Requête SQL sécurisée :
   // - On met à jour le texte
   // - MAIS seulement si l'utilisateur est le propriétaire du post-it et ADMIN : peut modifier tous les post-it
-  if (user.role === "admin") {
+  // 1. récupérer le board_id
+  db.get("SELECT board_id FROM messages WHERE id = ?", [id], (err, row) => {
+    if (!row) return res.json({ success: false });
+
+    const board_id = row.board_id;
+    if (user.role === "admin") {
+        db.run(
+          "UPDATE messages SET texte = ? WHERE id = ?",
+          [texte, id],
+          function() {
+            // prévenir les autres
+            io.to(board_id).emit("updateBoard");
+            res.json({ success: true })}
+        );
+    } else {
+      // USER → seulement ses posts
       db.run(
-        "UPDATE messages SET texte = ? WHERE id = ?",
-        [texte, id],
-        () => res.json({ success: true })
-      );
-  } else {
-    // USER → seulement ses posts
-    db.run(
-      `UPDATE messages 
-      SET texte = ? 
-      WHERE id = ? AND auteur_id = ?`,
-      [texte, id, req.session.user.id],
-      function (err) {
+        `UPDATE messages 
+        SET texte = ? 
+        WHERE id = ? AND auteur_id = ?`,
+        [texte, id, req.session.user.id],
+        function (err) {
 
-      // En cas d'erreur SQL
-      if (err) {
-        return res.json({ success: false });
-      }
+        // En cas d'erreur SQL
+        if (err) {
+          return res.json({ success: false });
+        }
+        //seulement si modification réussie
+        if (this.changes > 0) {
+          io.to(board_id).emit("updateBoard");}
 
-      // this.changes = nombre de lignes modifiées
-      // → 0 = refus (pas propriétaire)
-      // → 1 = succès
-      res.json({ success: this.changes > 0 });}
-    );  
-  }
+        // this.changes = nombre de lignes modifiées
+        // → 0 = refus (pas propriétaire)
+        // → 1 = succès
+        res.json({ success: this.changes > 0 });}
+      );  
+    }
+  });
 
 });
 
@@ -423,6 +466,13 @@ app.post("/deplacer",
 // =============================
 // LANCEMENT SERVEUR
 // =============================
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+//app.listen(PORT, () => {
+//    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+//});
+server.listen(PORT, () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
+// si avec deux pc et même wifi
+//server.listen(PORT, "0.0.0.0", () => {
+ //console.log("Serveur lancé");
+//});

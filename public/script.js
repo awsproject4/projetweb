@@ -287,4 +287,20 @@ window.addEventListener("DOMContentLoaded", () => {
   // ======================
 
   loadData();
+
+  // ======================
+  // SOCKET.IO (TEMPS RÉEL)
+  // ======================
+
+  // connexion au serveur
+  const socket = io();
+
+  // rejoindre le bon tableau
+  socket.emit("joinBoard", boardId);
+
+  // écouter les mises à jour
+  socket.on("updateBoard", () => {
+    loadData(); // recharge automatiquement
+  });
+
 });
