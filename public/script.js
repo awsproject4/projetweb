@@ -145,6 +145,63 @@ window.addEventListener("DOMContentLoaded", () => {
 
         board.appendChild(div);
 
+        // ======================
+        // DRAG & DROP
+        // ======================
+
+        let isDragging = false;
+
+        div.addEventListener("mousedown", (e) => {
+
+          // Empêche le drag si on clique sur bouton (delete/edit)
+          if (e.target.tagName === "BUTTON") return;
+
+          isDragging = true;
+
+          // Décalage pour garder la souris au bon endroit sur le post-it
+          const offsetX = e.clientX - div.offsetLeft;
+          const offsetY = e.clientY - div.offsetTop;
+
+          // Met le post-it au premier plan
+          div.style.zIndex = Date.now();
+
+          function onMouseMove(e) {
+            if (!isDragging) return;
+
+            // Nouvelle position
+            div.style.left = (e.pageX - offsetX) + "px";
+            div.style.top = (e.pageY - offsetY) + "px";
+          }
+
+          async function onMouseUp() {
+            isDragging = false;
+
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+
+            // ======================
+            // SAUVEGARDE POSITION
+            // ======================
+
+            await fetch("/deplacer", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id: msg.id,
+                x: parseInt(div.style.left),
+                y: parseInt(div.style.top)
+              })
+            });
+
+          }
+
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+
+        });
+
       });
 
     } catch (err) {

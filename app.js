@@ -375,6 +375,52 @@ app.get("/:board", (req, res) => {
 
 });
 // =============================
+// DEPLACER UN POST-IT
+// =============================
+app.post("/deplacer",
+  requireAuth,
+  requirePermission("can_edit"),
+  (req, res) => {
+
+    const { id, x, y } = req.body;
+    const user = req.session.user;
+
+    // Validation simple
+    if (x == null || y == null) {
+      return res.json({ success: false });
+    }
+
+    // ADMIN → peut déplacer tous les post-it
+    if (user.role === "admin") {
+
+      db.run(
+        "UPDATE messages SET x = ?, y = ? WHERE id = ?",
+        [x, y, id],
+        () => res.json({ success: true })
+      );
+
+    } else {
+
+      // USER → uniquement ses post-it
+      db.run(
+        `UPDATE messages 
+         SET x = ?, y = ? 
+         WHERE id = ? AND auteur_id = ?`,
+        [x, y, id, user.id],
+        function (err) {
+
+          if (err) {
+            return res.json({ success: false });
+          }
+
+          res.json({ success: this.changes > 0 });
+        }
+      );
+
+    }
+
+});
+// =============================
 // LANCEMENT SERVEUR
 // =============================
 app.listen(PORT, () => {

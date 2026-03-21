@@ -1,34 +1,88 @@
+/* ======================
+   BASE
+====================== */
 body {
   margin: 0;
-  overflow: hidden; /* évite scrollbars */
-  background: white;
-  font-family: Arial;
+  overflow: hidden; /* empêche les scrollbars */
+  background: #f5f5f5; /* fond légèrement gris (plus agréable) */
+  font-family: Arial, sans-serif;
 }
 
+/* ======================
+   BOARD
+====================== */
 #board {
   position: relative;
   width: 100vw;
   height: 100vh;
 }
 
+/* ======================
+   POST-IT
+====================== */
 .postit {
   position: absolute;
-  background: yellow;
-  padding: 10px;
+  background: #ffeb3b; /* jaune plus doux */
+  padding: 12px;
   width: 150px;
-  box-shadow: 2px 2px 5px gray;
-  cursor: pointer;
+
+  /* style visuel */
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.2);
+  border-radius: 6px;
+
+  /* gestion du texte */
+  word-wrap: break-word;
+
+  /* curseur drag */
+  cursor: grab;
+
+  /* transition douce */
+  transition: transform 0.1s;
 }
 
-.delete {
-  background: red;
-  color: white;
-  border: none;
-  cursor: pointer;
+/* effet quand on clique */
+.postit:active {
+  cursor: grabbing;
+  transform: scale(1.03);
 }
-.edit {
-  background: orange;
+
+/* ======================
+   TEXTE
+====================== */
+.postit p {
+  margin: 0 0 5px 0;
+}
+
+.postit small {
+  font-size: 10px;
+  color: #555;
+}
+
+/* ======================
+   BOUTONS
+====================== */
+.postit button {
   border: none;
   cursor: pointer;
+  padding: 3px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+/* bouton supprimer */
+.delete {
+  background: #e53935;
+  color: white;
+}
+
+/* bouton modifier */
+.edit {
+  background: #fb8c00;
+  color: white;
   margin-left: 5px;
+}
+
+/* hover effet */
+.postit button:hover {
+  opacity: 0.8;
 }
