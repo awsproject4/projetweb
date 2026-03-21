@@ -1,219 +1,233 @@
-// ======================
-// RECUPERATION ELEMENTS HTML
-// ======================
+window.addEventListener("DOMContentLoaded", () => {
+  // ======================
+  // RECUPERATION ELEMENTS HTML
+  // ======================
 
-// zone où les post-it seront affichés
-const board = document.getElementById("board");
+  // ======================
+  // IDENTIFIANT DU TABLEAU
+  // ======================
 
-// zone login / logout
-const authDiv = document.getElementById("auth");
+  // récupère le nom du tableau dans l'URL
+  const boardId = window.location.pathname.substring(1) || "default";
+
+  // affiche le nom du tableau
+  document.getElementById("boardTitle").textContent = "Tableau : " + boardId;
+
+  // zone où les post-it seront affichés
+  const board = document.getElementById("board");
+
+  // zone login / logout
+  const authDiv = document.getElementById("auth");
 
 
-// ======================
-// CHARGER LES DONNEES
-// ======================
+  // ======================
+  // CHARGER LES DONNEES
+  // ======================
 
-async function loadData() {
+  async function loadData() {
 
-  try {
+    try {
 
-    // appel AJAX vers le serveur
-    const res = await fetch("/liste");
-    const data = await res.json();
+      // appel AJAX vers le serveur
+      const res = await fetch("/liste/" + boardId);
+      const data = await res.json();
 
-    // vide la zone des post-it avant réaffichage
-    board.innerHTML = "";
-
-    // ======================
-    // LOGIN OU LOGOUT
-    // ======================
-
-    if (!data.user) {
-
-      authDiv.innerHTML = `
-        <form method="POST" action="/login">
-          <p>Nom :
-            <input name="username" placeholder="Username" required>
-          </p>
-
-          <p>Mot de passe :
-            <input name="password" type="password" required>
-          </p>
-
-          <button>Login</button>
-        </form>
-
-        <a href="/signup">S'inscrire</a>
-      `;
-
-    } else {
-
-      authDiv.innerHTML = `
-        Bienvenue ${data.user.username}
-        <a href="/logout">Logout</a>
-      `;
-
-    }
-
-    // ======================
-    // AFFICHAGE DES POST-IT
-    // ======================
-
-    data.messages.forEach(msg => {
-
-      const div = document.createElement("div");
-      div.className = "postit";
-
-      // position du post-it
-      div.style.left = msg.x + "px";
-      div.style.top = msg.y + "px";
-
-      // création du texte (évite XSS)
-      const p = document.createElement("p");
-      p.textContent = msg.texte;
-
-      // auteur + date
-      const info = document.createElement("small");
-      info.textContent = msg.username + " - " + msg.date_creation;
-
-      div.appendChild(p);
-      div.appendChild(info);
+      // vide la zone des post-it avant réaffichage
+      board.innerHTML = "";
 
       // ======================
-      // BOUTON SUPPRIMER
+      // LOGIN OU LOGOUT
       // ======================
 
-      if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
+      if (!data.user) {
 
-        const btn = document.createElement("button");
-        btn.textContent = "X";
-        btn.className = "delete";
+        authDiv.innerHTML = `
+          <form method="POST" action="/login">
+            <input type="hidden" name="board" value="${boardId}">
+            <p>Nom :
+              <input name="username" placeholder="Username" required>
+            </p>
 
-        btn.onclick = () => deletePost(msg.id);
+            <p>Mot de passe :
+              <input name="password" type="password" required>
+            </p>
 
-        div.appendChild(btn);
+            <button>Login</button>
+          </form>
+
+          <a href="/signup">S'inscrire</a>
+        `;
+
+      } else {
+
+        authDiv.innerHTML = `
+          Bienvenue ${data.user.username}
+          <a href="/logout?board=${boardId}">Logout</a>
+        `;
 
       }
 
       // ======================
-      // BOUTON MODIFIER POST-IT
+      // AFFICHAGE DES POST-IT
       // ======================
-      if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
-        const editBtn = document.createElement("button");
-        editBtn.textContent = "✏️";
-        editBtn.className = "edit";
+      data.messages.forEach(msg => {
 
-        editBtn.onclick = async () => {
+        const div = document.createElement("div");
+        div.className = "postit";
 
-          // Demande à l'utilisateur le nouveau texte
-          const nouveauTexte = prompt("Modifier le post-it :", msg.texte);
+        // position du post-it
+        div.style.left = msg.x + "px";
+        div.style.top = msg.y + "px";
 
-          // Vérifie que le texte n'est pas vide
-          if (!nouveauTexte || nouveauTexte.trim() === "") return;
+        // création du texte (évite XSS)
+        const p = document.createElement("p");
+        p.textContent = msg.texte;
 
-          // Envoi de la requête AJAX au serveur
-          await fetch("/modifier", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              id: msg.id,
-              texte: nouveauTexte
-            })
-          });
+        // auteur + date
+        const info = document.createElement("small");
+        info.textContent = msg.username + " - " + msg.date_creation;
 
-          // Recharge les post-it pour afficher la modification
-          loadData();
-        };
+        div.appendChild(p);
+        div.appendChild(info);
 
-        div.appendChild(editBtn);
-      }
+        // ======================
+        // BOUTON SUPPRIMER
+        // ======================
 
-      board.appendChild(div);
+        if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
-    });
+          const btn = document.createElement("button");
+          btn.textContent = "X";
+          btn.className = "delete";
 
-  } catch (err) {
+          btn.onclick = () => deletePost(msg.id);
 
-    console.error("Erreur chargement données :", err);
+          div.appendChild(btn);
 
-  }
+        }
 
-}
+        // ======================
+        // BOUTON MODIFIER POST-IT
+        // ======================
+        if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "✏️";
+          editBtn.className = "edit";
 
-// ======================
-// DOUBLE CLIC CREATION
-// ======================
+          editBtn.onclick = async () => {
 
-board.addEventListener("dblclick", async (e) => {
+            // Demande à l'utilisateur le nouveau texte
+            const nouveauTexte = prompt("Modifier le post-it :", msg.texte);
 
-  const texte = prompt("Texte du post-it");
+            // Vérifie que le texte n'est pas vide
+            if (!nouveauTexte || nouveauTexte.trim() === "") return;
 
-  if (!texte || texte.trim() === "") return;
+            // Envoi de la requête AJAX au serveur
+            await fetch("/modifier", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id: msg.id,
+                texte: nouveauTexte
+              })
+            });
 
-  try {
+            // Recharge les post-it pour afficher la modification
+            loadData();
+          };
 
-    const res = await fetch("/ajouter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        texte,
-        x: e.pageX,
-        y: e.pageY
-      })
-    });
+          div.appendChild(editBtn);
+        }
 
-    const data = await res.json();
+        board.appendChild(div);
 
-    // si utilisateur non connecté
-    if (!data.success) {
-      alert("Vous devez être connecté pour créer un post-it");
-      return;
+      });
+
+    } catch (err) {
+
+      console.error("Erreur chargement données :", err);
+
     }
 
-    loadData();
+  }
 
-  } catch (err) {
 
-    console.error("Erreur création post-it :", err);
+  // ======================
+  // DOUBLE CLIC CREATION
+  // ======================
+
+  board.addEventListener("dblclick", async (e) => {
+
+    const texte = prompt("Texte du post-it");
+
+    if (!texte || texte.trim() === "") return;
+
+    try {
+
+      const res = await fetch("/ajouter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          texte,
+          x: e.pageX,
+          y: e.pageY,
+          board_id: boardId
+        })
+      });
+
+      const data = await res.json();
+
+      // si utilisateur non connecté
+      if (!data.success) {
+        alert("Vous devez être connecté pour créer un post-it");
+        return;
+      }
+
+      loadData();
+
+    } catch (err) {
+
+      console.error("Erreur création post-it :", err);
+
+    }
+
+  });
+
+
+  // ======================
+  // SUPPRESSION POST-IT
+  // ======================
+
+  async function deletePost(id) {
+
+    if (!confirm("Supprimer ce post-it ?")) return;
+
+    try {
+
+      await fetch("/effacer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+
+      loadData();
+
+    } catch (err) {
+
+      console.error("Erreur suppression :", err);
+
+    }
 
   }
 
+
+  // ======================
+  // CHARGEMENT INITIAL
+  // ======================
+
+  loadData();
 });
-
-
-// ======================
-// SUPPRESSION POST-IT
-// ======================
-
-async function deletePost(id) {
-
-  if (!confirm("Supprimer ce post-it ?")) return;
-
-  try {
-
-    await fetch("/effacer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
-
-    loadData();
-
-  } catch (err) {
-
-    console.error("Erreur suppression :", err);
-
-  }
-
-}
-
-
-// ======================
-// CHARGEMENT INITIAL
-// ======================
-
-loadData();

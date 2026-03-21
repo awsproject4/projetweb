@@ -112,10 +112,10 @@ db.serialize(() => {
 // ROUTES HTML
 // =============================
 // Page principale
-app.get("/", (req, res) => {
+//app.get("/", (req, res) => {
     //res.send("Serveur fonctionne");
-    res.sendFile(path.join(__dirname, "views/index.html"));
-});
+    //res.sendFile(path.join(__dirname, "views/index.html"));
+//});
 
 // Page inscription
 app.get("/signup", (req, res) => {
@@ -130,7 +130,7 @@ app.get("/signup", (req, res) => {
 // Inscription
 app.post("/signup", async (req, res) => {
 
-  const { username, password } = req.body;
+  const { username, password, board } = req.body;
   if(!username || !password){
   return res.send("Champs invalides");
   }
@@ -149,7 +149,8 @@ app.post("/signup", async (req, res) => {
     [username, hash],
     (err) => {
       if (err) return res.send("Utilisateur déjà existant");
-      res.redirect("/");
+      //res.redirect("/");
+      res.redirect("/" + (board || "default"))
     }
   );
 });
@@ -158,7 +159,7 @@ app.post("/signup", async (req, res) => {
 // Connexion
 app.post("/login", (req, res) => {
   //Récupérer les données du formulaire
-  const { username, password } = req.body;
+  const { username, password, board } = req.body;
     //chercher l'utilisateur dans la base
   db.get(
     "SELECT * FROM users WHERE username = ?",
@@ -173,14 +174,15 @@ app.post("/login", (req, res) => {
         //stocker l'utilisateur dans la session
       req.session.user = user;
         //Rediriger vers la page principale
-      res.redirect("/");
+      res.redirect("/" + (board || "default"));
     }
   );
 });
 // Déconnexion
 app.get("/logout", (req, res) => {
+  const board = req.query.board;
   req.session.destroy(() => {
-    res.redirect("/");
+    res.redirect("/" + (board || "default"));
   });
 });
 
@@ -192,15 +194,15 @@ app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non con
   requirePermission("can_create"),//Vérifie que l'utilisateur a le droit de creer
   (req, res) => {
 
-  const { texte, x, y } = req.body;
+  const { texte, x, y, board_id } = req.body;
   
 
   if(!texte || texte.length > 500){
   return res.json({success:false});
   }
   db.run(
-    "INSERT INTO messages (texte, x, y, auteur_id) VALUES (?, ?, ?, ?)",
-    [texte, x, y, req.session.user.id],
+    "INSERT INTO messages (texte, x, y, auteur_id, board_id) VALUES (?, ?, ?, ?, ?)",
+    [texte, x, y, req.session.user.id, board_id],
     function (err) {
       if (err) return res.json({ success: false });
       // Réponse pour AJAX
@@ -235,14 +237,16 @@ app.post("/effacer", requireAuth,//Sécurité : empêche les utilisateurs non co
 });
 
 // Liste des post-it
-app.get("/liste", (req, res) => {
+app.get("/liste/:board", (req, res) => {
+  const board = req.params.board;
 
   db.all(
     `SELECT messages.*, users.username
      FROM messages
      JOIN users ON messages.auteur_id = users.id
+     WHERE board_id = ?
      ORDER BY date_creation DESC`,
-    [],
+    [board],
     (err, rows) => {
       res.json({
         user: req.session.user || null,
@@ -362,6 +366,14 @@ app.post("/admin/role", requireAdmin, (req, res) => {
 
 });
 
+// =============================
+// PAGE TABLEAU DYNAMIQUE
+// =============================
+app.get("/:board", (req, res) => {
+
+  res.sendFile(path.join(__dirname, "views/index.html"));
+
+});
 // =============================
 // LANCEMENT SERVEUR
 // =============================
