@@ -201,6 +201,50 @@ window.addEventListener("DOMContentLoaded", () => {
           document.addEventListener("mouseup", onMouseUp);
 
         });
+        // ======================
+        // DRAG MOBILE (TOUCH)
+        // ======================
+
+        div.addEventListener("touchstart", (e) => {
+
+          const touch = e.touches[0];
+
+          let offsetX = touch.clientX - div.offsetLeft;
+          let offsetY = touch.clientY - div.offsetTop;
+
+          div.style.zIndex = Date.now();
+
+          function onTouchMove(e) {
+            const touch = e.touches[0];
+
+            div.style.left = (touch.pageX - offsetX) + "px";
+            div.style.top = (touch.pageY - offsetY) + "px";
+          }
+
+          async function onTouchEnd() {
+
+            document.removeEventListener("touchmove", onTouchMove);
+            document.removeEventListener("touchend", onTouchEnd);
+
+            // sauvegarde position
+            await fetch("/deplacer", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                id: msg.id,
+                x: parseInt(div.style.left),
+                y: parseInt(div.style.top)
+              })
+            });
+
+          }
+
+          document.addEventListener("touchmove", onTouchMove);
+          document.addEventListener("touchend", onTouchEnd);
+
+        });
 
       });
 

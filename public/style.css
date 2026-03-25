@@ -6,6 +6,8 @@ body {
   overflow: hidden; /* empêche les scrollbars */
   background: #f5f5f5; /* fond légèrement gris (plus agréable) */
   font-family: Arial, sans-serif;
+  /* important pour mobile */
+  touch-action: none; /* évite scroll/zoom pendant drag */
 }
 
 /* ======================
@@ -85,4 +87,35 @@ body {
 /* hover effet */
 .postit button:hover {
   opacity: 0.8;
+}
+/* ======================
+   RESPONSIVE MOBILE
+====================== */
+@media (max-width: 600px) {
+
+  /* post-it plus petits */
+  .postit {
+    width: 120px;
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  /* boutons plus gros (doigt) */
+  .postit button {
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  /* titre */
+  h2 {
+    font-size: 18px;
+    margin: 10px;
+  }
+
+  /* zone auth */
+  #auth {
+    font-size: 14px;
+    margin: 10px;
+  }
+
 }

@@ -469,10 +469,10 @@ app.post("/deplacer",
 //app.listen(PORT, () => {
 //    console.log(`Serveur démarré sur http://localhost:${PORT}`);
 //});
-server.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`);
-});
-// si avec deux pc et même wifi
-//server.listen(PORT, "0.0.0.0", () => {
- //console.log("Serveur lancé");
+//server.listen(PORT, () => {
+ // console.log(`Serveur démarré sur http://localhost:${PORT}`);
 //});
+// si avec deux pc et même wifi
+server.listen(PORT, "0.0.0.0", () => {
+ console.log("Serveur lancé");
+});
