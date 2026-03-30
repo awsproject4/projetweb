@@ -152,6 +152,12 @@ window.addEventListener("DOMContentLoaded", () => {
         let isDragging = false;
 
         div.addEventListener("mousedown", (e) => {
+          // pas connecté interdit
+          if (!data.user) return;
+
+          //  pas propriétaire ET pas admin  interdit
+          if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
+
 
           // Empêche le drag si on clique sur bouton (delete/edit)
           if (e.target.tagName === "BUTTON") return;
@@ -206,6 +212,11 @@ window.addEventListener("DOMContentLoaded", () => {
         // ======================
 
         div.addEventListener("touchstart", (e) => {
+           //  pas connecté → interdit
+          if (!data.user) return;
+
+            // pas propriétaire ET pas admin → interdit
+          if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
 
           const touch = e.touches[0];
 

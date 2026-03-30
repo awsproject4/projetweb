@@ -472,7 +472,7 @@ app.post("/deplacer",
       return res.json({ success: false });
     }
 
-    // ADMIN → peut déplacer tous les post-it
+    // ADMIN  peut déplacer tous les post-it
     if (user.role === "admin") {
 
       db.run(
@@ -483,7 +483,7 @@ app.post("/deplacer",
 
     } else {
 
-      // USER → uniquement ses post-it
+      // USER uniquement ses post-it
       db.run(
         `UPDATE messages 
          SET x = ?, y = ? 
@@ -503,9 +503,6 @@ app.post("/deplacer",
 
 });
 
-app.get("/test", (req, res) => {
-  res.send("OK");
-});
 // =============================
 // LANCEMENT SERVEUR
 // =============================
