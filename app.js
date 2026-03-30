@@ -296,6 +296,10 @@ app.get("/liste/:board", (req, res) => {
      ORDER BY date_creation DESC`,
     [board],
     (err, rows) => {
+      if (err) {
+        console.error("ERREUR SQL :", err); // IMPORTANT
+        return res.status(500).json({ error: err.message });
+      }
       res.json({
         user: req.session.user || null,
         messages: rows
