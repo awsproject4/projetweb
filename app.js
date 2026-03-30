@@ -69,6 +69,7 @@ app.use(express.urlencoded({ extended: true }));
 // Permet de servir les fichiers CSS et JS
 app.use(express.static("public"));
 // Gestion des sessions (authentification)
+app.set("trust proxy", 1);
 app.use(
   session({
   secret: "secret-key",
