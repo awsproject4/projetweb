@@ -18,11 +18,25 @@ const db = new sqlite3.Database("./database.db");
 // =============================
 // SOCKET.IO
 // =============================
-const http = require("http");
-const server = http.createServer(app);
-const { Server } = require("socket.io");
+//const server = http.createServer(app);
+//const { Server } = require("socket.io");
+//const io = new Server(server);
+//=====AVEC HTTPS
+const https = require("https");
+const fs = require("fs");
 
-const io = new Server(server);
+// certificat SSL
+const options = {
+  key: fs.readFileSync("key.pem"),
+  cert: fs.readFileSync("cert.pem")
+};
+
+// serveur HTTPS
+const httpsServer = https.createServer(options, app);
+
+// Socket.IO sur HTTPS
+const { Server } = require("socket.io");
+const io = new Server(httpsServer);
 
 // connexion client
 io.on("connection", (socket) => {
@@ -48,15 +62,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 // Gestion des sessions (authentification)
 app.use(
-session({
-secret: "secret-key",
-resave: false,
-saveUninitialized: false,
-cookie: {
-httpOnly: true,
-sameSite: "strict"
-}
-})
+  session({
+  secret: "secret-key",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: true //  HTTPS uniquement
+    }
+  })
 );
 
 // =============================
@@ -473,6 +488,47 @@ app.post("/deplacer",
  // console.log(`Serveur démarré sur http://localhost:${PORT}`);
 //});
 // si avec deux pc et même wifi
-server.listen(PORT, "0.0.0.0", () => {
- console.log("Serveur lancé");
+//server.listen(PORT, "0.0.0.0", () => {
+// console.log("Serveur lancé");
+//});
+
+// =============================
+// REDIRECTION HTTP -> HTTPS
+// =============================
+
+// On importe le module HTTP (non sécurisé)
+const http = require("http");
+
+// Création d’un serveur HTTP simple
+http.createServer((req, res) => {
+
+  // Code 301 = redirection permanente
+  // → indique au navigateur que le site doit toujours être en HTTPS
+  res.writeHead(301, {
+
+    // On reconstruit l’URL en HTTPS
+    // req.headers.host = domaine + port (ex: localhost:3000)
+    // req.url = chemin demandé (/login, /board, etc.)
+    "Location": "https://localhost:3000" + req.url
+  });
+
+  // On termine la réponse sans contenu
+  res.end();
+
+// Le serveur HTTP écoute sur le port 8080 (port standard du HTTP)
+}).listen(8080,  () => {
+  console.log("Serveur HTTP lancé sur http://localhost:8080");
+});
+
+
+// =============================
+// LANCEMENT SERVEUR HTTPS
+// =============================
+
+// On démarre le serveur sécurisé (HTTPS)
+httpsServer.listen(PORT, "0.0.0.0", () => {
+
+  // Message affiché dans la console
+  console.log("Serveur HTTPS lancé sur https://localhost:" + PORT);
+
 });
