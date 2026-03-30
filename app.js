@@ -13,7 +13,13 @@ const path = require("path");
 // =============================
 const app = express();
 PORT = process.env.PORT || 3000;
-const db = new sqlite3.Database("./database.db");
+const db = new sqlite3.Database("./database.db", (err) => {
+  if (err) {
+    console.error("Erreur DB :", err);
+  } else {
+    console.log("DB connectée");
+  }
+});
 
 // =============================
 // SOCKET.IO
@@ -71,7 +77,7 @@ app.use(
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: false //  important pour render
+    secure: true
     }
   })
 );
@@ -93,6 +99,9 @@ function requirePermission(permission) {
   return (req, res, next) => {
 
     const user = req.session.user;
+    if (!user) {
+      return res.status(401).json({ success: false });
+    }
 
     // admin → accès total
     if (user.role === "admin") return next();
@@ -486,6 +495,10 @@ app.post("/deplacer",
 
     }
 
+});
+
+app.get("/test", (req, res) => {
+  res.send("OK");
 });
 // =============================
 // LANCEMENT SERVEUR
