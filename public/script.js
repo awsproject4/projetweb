@@ -337,14 +337,14 @@ window.addEventListener("DOMContentLoaded", () => {
   // ======================
 
   // connexion au serveur
-  const socket = io();
+  //const socket = io();
 
   // rejoindre le bon tableau
-  socket.emit("joinBoard", boardId);
+  //socket.emit("joinBoard", boardId);
 
   // écouter les mises à jour
-  socket.on("updateBoard", () => {
-    loadData(); // recharge automatiquement
-  });
+  //socket.on("updateBoard", () => {
+   // loadData(); // recharge automatiquement
+  //});
 
 });
