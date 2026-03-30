@@ -434,6 +434,9 @@ app.get("/:board", (req, res) => {
   res.sendFile(path.join(__dirname, "views/index.html"));
 
 });
+app.get("/", (req, res) => {
+  res.redirect("/default");
+});
 // =============================
 // DEPLACER UN POST-IT
 // =============================
