@@ -13,7 +13,7 @@ const path = require("path");
 // =============================
 const app = express();
 PORT = process.env.PORT || 3000;
-const db = new sqlite3.Database("./database.db", (err) => {
+const db = new sqlite3.Database("/tmp/database.db", (err) => {
   if (err) {
     console.error("Erreur DB :", err);
   } else {
@@ -134,7 +134,11 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE,
-      password TEXT
+      password TEXT,
+      role TEXT DEFAULT 'user',
+      can_create INTEGER DEFAULT 1,
+      can_edit INTEGER DEFAULT 1,
+      can_delete INTEGER DEFAULT 1
     )
   `);
     // Table messages (post-it)
@@ -146,6 +150,7 @@ db.serialize(() => {
       x INTEGER,
       y INTEGER,
       auteur_id INTEGER,
+      board_id TEXT DEFAULT 'default',
       FOREIGN KEY (auteur_id) REFERENCES users(id)
     )
   `);
@@ -504,47 +509,8 @@ app.get("/test", (req, res) => {
 // =============================
 // LANCEMENT SERVEUR
 // =============================
-//app.listen(PORT, () => {
-//    console.log(`Serveur démarré sur http://localhost:${PORT}`);
-//});
+
 server.listen(PORT, () => {
   console.log("Serveur lancé sur port " + PORT);
 });
 
-// =============================
-// REDIRECTION HTTP -> HTTPS
-// =============================
-
-// Création d’un serveur HTTP simple
-//http.createServer((req, res) => {
-
-  // Code 301 = redirection permanente
-  // → indique au navigateur que le site doit toujours être en HTTPS
-  //res.writeHead(301, {
-
-    // On reconstruit l’URL en HTTPS
-    // req.headers.host = domaine + port (ex: localhost:3000)
-    // req.url = chemin demandé (/login, /board, etc.)
-   // "Location": "https://localhost:3000" + req.url
-  //});
-
-  // On termine la réponse sans contenu
-  //res.end();
-
-// Le serveur HTTP écoute sur le port 8080 (port standard du HTTP)
-//}).listen(8080,  () => {
- // console.log("Serveur HTTP lancé sur http://localhost:8080");
-//});
-
-
-// =============================
-// LANCEMENT SERVEUR HTTPS
-// =============================
-
-// On démarre le serveur sécurisé (HTTPS)
-//httpsServer.listen(PORT, "0.0.0.0", () => {
-
-  // Message affiché dans la console
- // console.log("Serveur HTTPS lancé sur https://localhost:" + PORT);
-
-//});
