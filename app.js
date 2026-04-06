@@ -188,30 +188,39 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
 
   const { username, password, board } = req.body;
-  if(!username || !password){
-  return res.send("Champs invalides");
+
+  if (!username || !password) {
+    return res.send("Champs invalides");
   }
 
-  if(username.length > 50 || password.length > 100){
+  if (username.length > 50 || password.length > 100) {
     return res.send("Données trop longues");
   }
 
-  // Hachage du mot de passe
+  // hash mot de passe
   const hash = await bcrypt.hash(password, 10);
 
-  
+  // vérifier nombre d'utilisateurs
+  db.get("SELECT COUNT(*) as count FROM users", [], (err, row) => {
 
-  db.run(
-    "INSERT INTO users (username, password) VALUES (?, ?)",
-    [username, hash],
-    (err) => {
-      if (err) return res.send("Utilisateur déjà existant");
-      //res.redirect("/");
-      res.redirect("/" + (board || "default"))
-    }
-  );
+    if (err) return res.send("Erreur serveur");
+
+    // premier user = admin
+    const role = row.count === 0 ? "admin" : "user";
+
+    db.run(
+      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+      [username, hash, role],
+      (err) => {
+        if (err) return res.send("Utilisateur déjà existant");
+
+        res.redirect("/" + (board || "default"));
+      }
+    );
+
+  });
+
 });
-
 
 // Connexion
 app.post("/login", loginLimiter, (req, res) => {
