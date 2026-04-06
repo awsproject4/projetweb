@@ -67,7 +67,7 @@ app.use(express.json({ limit: "10kb" }));
 //limitation des tentatives de connexion (rate limiting)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 5,
   message: "Trop de tentatives, réessaie plus tard"
 });
 
@@ -174,6 +174,24 @@ db.serialize(() => {
     //res.sendFile(path.join(__dirname, "views/index.html"));
 //});
 
+//creation de admin
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "admin258"; 
+
+db.get("SELECT * FROM users WHERE username = ?", [ADMIN_USERNAME], async (err, user) => {
+  if (!user) {
+    const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+
+    db.run(
+      "INSERT INTO users (username, password, role) VALUES (?, ?, 'admin')",
+      [ADMIN_USERNAME, hash],
+      () => {
+        console.log("Admin créé automatiquement");
+      }
+    );
+  }
+});
+
 // Page inscription
 app.get("/signup", (req, res) => {
   res.sendFile(path.join(__dirname, "views/signup.html"));
@@ -188,38 +206,28 @@ app.get("/signup", (req, res) => {
 app.post("/signup", async (req, res) => {
 
   const { username, password, board } = req.body;
-
-  if (!username || !password) {
-    return res.send("Champs invalides");
+  if(!username || !password){
+  return res.send("Champs invalides");
   }
 
-  if (username.length > 50 || password.length > 100) {
+  if(username.length > 50 || password.length > 100){
     return res.send("Données trop longues");
   }
 
-  // hash mot de passe
+  // Hachage du mot de passe
   const hash = await bcrypt.hash(password, 10);
 
-  // vérifier nombre d'utilisateurs
-  db.get("SELECT COUNT(*) as count FROM users", [], (err, row) => {
+  
 
-    if (err) return res.send("Erreur serveur");
-
-    // premier user = admin
-    const role = row.count === 0 ? "admin" : "user";
-
-    db.run(
-      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-      [username, hash, role],
-      (err) => {
-        if (err) return res.send("Utilisateur déjà existant");
-
-        res.redirect("/" + (board || "default"));
-      }
-    );
-
-  });
-
+  db.run(
+    "INSERT INTO users (username, password) VALUES (?, ?)",
+    [username, hash],
+    (err) => {
+      if (err) return res.send("Utilisateur déjà existant");
+      //res.redirect("/");
+      res.redirect("/" + (board || "default"))
+    }
+  );
 });
 
 // Connexion
