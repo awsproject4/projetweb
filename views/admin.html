@@ -9,9 +9,6 @@
 
 <h1>Admin</h1>
 
-<!-- =============================
-TABLEAU DES UTILISATEURS
-============================= -->
 <table border="1" cellpadding="10">
   <thead>
     <tr>
@@ -23,7 +20,6 @@ TABLEAU DES UTILISATEURS
     </tr>
   </thead>
 
-  <!-- zone dynamique remplie en JS -->
   <tbody id="users"></tbody>
 </table>
 
@@ -34,59 +30,76 @@ TABLEAU DES UTILISATEURS
 // =============================
 async function loadUsers() {
 
-  // appel API sécurisé (admin uniquement côté serveur)
   const res = await fetch("/admin/users");
   const users = await res.json();
 
   const tbody = document.getElementById("users");
-
-  // on vide le tableau avant de recharger
   tbody.innerHTML = "";
 
-  // boucle sur chaque utilisateur
   users.forEach(u => {
 
     const row = document.createElement("tr");
 
-    // innerHTML ici ok car données contrôlées côté serveur
-    row.innerHTML = `
-      <td>${u.username}</td>
+    // =============================
+    // USERNAME (SAFE)
+    // =============================
+    const tdUser = document.createElement("td");
+    tdUser.textContent = u.username;
 
-      <!-- =============================
-      ROLE (user / admin)
-      ============================= -->
-      <td>
-        <select onchange="setRole(${u.id}, this.value)">
-          <option value="user" ${u.role==='user'?'selected':''}>User</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-        </select>
-      </td>
+    // =============================
+    // ROLE
+    // =============================
+    const tdRole = document.createElement("td");
+    const select = document.createElement("select");
 
-      <!-- =============================
-      PERMISSIONS
-      ============================= -->
+    const optionUser = document.createElement("option");
+    optionUser.value = "user";
+    optionUser.textContent = "User";
+    if (u.role === "user") optionUser.selected = true;
 
-      <!-- création -->
-      <td>
-        <input type="checkbox"
-          ${u.can_create ? 'checked' : ''}
-          onchange="setPerm(${u.id}, 'can_create', this.checked)">
-      </td>
+    const optionAdmin = document.createElement("option");
+    optionAdmin.value = "admin";
+    optionAdmin.textContent = "Admin";
+    if (u.role === "admin") optionAdmin.selected = true;
 
-      <!-- modification -->
-      <td>
-        <input type="checkbox"
-          ${u.can_edit ? 'checked' : ''}
-          onchange="setPerm(${u.id}, 'can_edit', this.checked)">
-      </td>
+    select.appendChild(optionUser);
+    select.appendChild(optionAdmin);
 
-      <!-- suppression -->
-      <td>
-        <input type="checkbox"
-          ${u.can_delete ? 'checked' : ''}
-          onchange="setPerm(${u.id}, 'can_delete', this.checked)">
-      </td>
-    `;
+    select.onchange = () => setRole(u.id, select.value);
+
+    tdRole.appendChild(select);
+
+    // =============================
+    // PERMISSIONS
+    // =============================
+
+    function createCheckbox(permName, value) {
+      const td = document.createElement("td");
+      const checkbox = document.createElement("input");
+
+      checkbox.type = "checkbox";
+      checkbox.checked = value;
+
+      checkbox.onchange = () => {
+        setPerm(u.id, permName, checkbox.checked);
+      };
+
+      td.appendChild(checkbox);
+      return td;
+    }
+
+    const tdCreate = createCheckbox("can_create", u.can_create);
+    const tdEdit = createCheckbox("can_edit", u.can_edit);
+    const tdDelete = createCheckbox("can_delete", u.can_delete);
+
+    // =============================
+    // AJOUT À LA LIGNE
+    // =============================
+    row.appendChild(tdUser);
+    row.appendChild(tdRole);
+    row.appendChild(tdCreate);
+    row.appendChild(tdEdit);
+    row.appendChild(tdDelete);
 
     tbody.appendChild(row);
   });
@@ -96,15 +109,12 @@ async function loadUsers() {
 // CHANGER LE ROLE
 // =============================
 async function setRole(id, role) {
-
-  // appel API pour modifier le rôle
   await fetch("/admin/role", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ id, role })
   });
 
-  // recharge pour mettre à jour l'affichage
   loadUsers();
 }
 
@@ -112,7 +122,6 @@ async function setRole(id, role) {
 // CHANGER UNE PERMISSION
 // =============================
 async function setPerm(id, perm, value) {
-
   await fetch("/admin/permission", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -122,10 +131,11 @@ async function setPerm(id, perm, value) {
       value
     })
   });
-
 }
 
-// chargement initial
+// =============================
+// INIT
+// =============================
 loadUsers();
 
 </script>

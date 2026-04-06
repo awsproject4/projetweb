@@ -6,6 +6,7 @@ const sqlite3 = require("sqlite3").verbose();
 //J’utilise express-session pour gérer l’authentification côté serveur.
 const bcrypt = require("bcrypt");
 const session = require("express-session");
+const rateLimit = require("express-rate-limit");
 const path = require("path");
 
 // =============================
@@ -13,7 +14,7 @@ const path = require("path");
 // =============================
 const app = express();
 PORT = process.env.PORT || 3000;
-const db = new sqlite3.Database("/tmp/database.db", (err) => {
+const db = new sqlite3.Database("./database.db", (err) => {
   if (err) {
     console.error("Erreur DB :", err);
   } else {
@@ -61,7 +62,14 @@ io.on("connection", (socket) => {
 // =============================
 
 // Permet de lire le JSON envoyé par AJAX
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
+
+//limitation des tentatives de connexion (rate limiting)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: "Trop de tentatives, réessaie plus tard"
+});
 
 // Permet de lire les formulaires HTML
 app.use(express.urlencoded({ extended: true }));
@@ -72,7 +80,7 @@ app.use(express.static("public"));
 app.set("trust proxy", 1);
 app.use(
   session({
-  secret: "secret-key",
+  secret: process.env.SESSION_SECRET || "dev-secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -186,7 +194,7 @@ app.post("/signup", async (req, res) => {
 
   if(username.length > 50 || password.length > 100){
     return res.send("Données trop longues");
-}
+  }
 
   // Hachage du mot de passe
   const hash = await bcrypt.hash(password, 10);
@@ -206,7 +214,7 @@ app.post("/signup", async (req, res) => {
 
 
 // Connexion
-app.post("/login", (req, res) => {
+app.post("/login", loginLimiter, (req, res) => {
   //Récupérer les données du formulaire
   const { username, password, board } = req.body;
     //chercher l'utilisateur dans la base
@@ -244,6 +252,10 @@ app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non con
   (req, res) => {
 
   const { texte, x, y, board_id } = req.body;
+
+  if (typeof x !== "number" || typeof y !== "number") {
+    return res.json({ success: false });
+  }
   
 
   if(!texte || texte.length > 500){
@@ -465,6 +477,11 @@ app.post("/deplacer",
   (req, res) => {
 
     const { id, x, y } = req.body;
+
+    if (typeof x !== "number" || typeof y !== "number") {
+      return res.json({ success: false });
+    }
+
     const user = req.session.user;
 
     // Validation simple
