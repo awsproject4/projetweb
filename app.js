@@ -93,7 +93,7 @@ app.use(
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
     secure: true
     }
   })
@@ -289,6 +289,7 @@ app.get("/logout", (req, res) => {
 app.post("/ajouter", csrfProtection, requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
   requirePermission("can_create"),//Vérifie que l'utilisateur a le droit de creer
   (req, res) => {
+    console.log("SESSION USER:", req.session.user);
 
   const { texte, x, y, board_id } = req.body;
 
