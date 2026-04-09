@@ -31,7 +31,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
 
       // appel AJAX vers le serveur
-      const res = await fetch("/liste/" + boardId);
+      const res = await fetch("/liste/" + boardId, {credentials: "include"});
       const data = await res.json();
       csrfToken = data.csrfToken;
       console.log("CSRF TOKEN =", csrfToken);
@@ -132,6 +132,7 @@ window.addEventListener("DOMContentLoaded", () => {
             // Envoi de la requête AJAX au serveur
             await fetch("/modifier", {
               method: "POST",
+              credentials: "include",
               headers: {
                 "Content-Type": "application/json",
                 "CSRF-Token": csrfToken
@@ -197,6 +198,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
             await fetch("/deplacer", {
               method: "POST",
+              credentials: "include",
               headers: {
                 "Content-Type": "application/json",
                 "CSRF-Token": csrfToken
@@ -247,6 +249,7 @@ window.addEventListener("DOMContentLoaded", () => {
             // sauvegarde position
             await fetch("/deplacer", {
               method: "POST",
+              credentials: "include",
               headers: {
                 "Content-Type": "application/json",
                 "CSRF-Token": csrfToken
@@ -294,6 +297,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const res = await fetch("/ajouter", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json", "CSRF-Token": csrfToken },
         body: JSON.stringify({
           texte,
@@ -341,6 +345,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
       await fetch("/effacer", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json", "CSRF-Token": csrfToken },
         body: JSON.stringify({ id })
       });
