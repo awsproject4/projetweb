@@ -21,6 +21,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   //csurf = protège contre les actions faites "à mon insu"
   let csrfToken = "";
+  let currentUser = null;
   // ======================
   // CHARGER LES DONNEES
   // ======================
@@ -33,6 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/liste/" + boardId);
       const data = await res.json();
       csrfToken = data.csrfToken;
+      currentUser = data.user;
 
       // vide la zone des post-it avant réaffichage
       board.innerHTML = "";
@@ -41,7 +43,7 @@ window.addEventListener("DOMContentLoaded", () => {
       // LOGIN OU LOGOUT
       // ======================
 
-      if (data.user.role === "guest") {
+      if (currentUser.role === "guest") {
 
         authDiv.innerHTML = `
           <form method="POST" action="/login">
@@ -97,7 +99,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // BOUTON SUPPRIMER
         // ======================
 
-        if (data.user.role !== "guest" && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
+        if (currentUser.role !== "guest" && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
 
           const btn = document.createElement("button");
           btn.textContent = "X";
@@ -112,7 +114,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // ======================
         // BOUTON MODIFIER POST-IT
         // ======================
-        if (data.user.role !== "guest" && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
+        if (currentUser.role !== "guest" && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
 
           const editBtn = document.createElement("button");
           editBtn.textContent = "✏️";
@@ -156,10 +158,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("mousedown", (e) => {
           // pas connecté interdit
-          if (data.user.role === "guest") return;
+          if (currentUser.role === "guest") return;
 
           //  pas propriétaire ET pas admin  interdit
-          if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
+          if (currentUser.id !== msg.auteur_id && currentUser.role !== "admin") return;
 
 
           // Empêche le drag si on clique sur bouton (delete/edit)
@@ -217,10 +219,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("touchstart", (e) => {
            //  pas connecté → interdit
-          if (data.user.role === "guest") return;
+          if (currentUser.role === "guest") return;
 
             // pas propriétaire ET pas admin → interdit
-          if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
+          if (currentUser.id !== msg.auteur_id && currentUser.role !== "admin") return;
 
           const touch = e.touches[0];
 
@@ -278,7 +280,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ======================
 
   board.addEventListener("dblclick", async (e) => {
-    if (data.user.role === "guest") {
+    if (!currentUser || currentUser.role === "guest") {
       alert("Vous devez être connecté pour créer un post-it");
       return;
     }
