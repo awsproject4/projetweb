@@ -6,7 +6,7 @@ https://projetweb-6548.onrender.com/
 Vous pouvez tester le compte administrateur avec :
 
 * Username : admin
-* Password : monSuperMotDePasse
+* Password : nouveauMotDePasse689!
 
 ### Sécurité
 
