@@ -296,8 +296,8 @@ window.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json", "CSRF-Token": csrfToken },
         body: JSON.stringify({
           texte,
-          x: e.pageX,
-          y: e.pageY,
+          x: parseInt(e.pageX),
+          y: parseInt(e.pageY),
           board_id: boardId
         })
       });
