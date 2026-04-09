@@ -19,7 +19,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // zone login / logout
   const authDiv = document.getElementById("auth");
 
-
+  //csurf = protège contre les actions faites "à mon insu"
+  let csrfToken = "";
   // ======================
   // CHARGER LES DONNEES
   // ======================
@@ -31,6 +32,7 @@ window.addEventListener("DOMContentLoaded", () => {
       // appel AJAX vers le serveur
       const res = await fetch("/liste/" + boardId);
       const data = await res.json();
+      csrfToken = data.csrfToken;
 
       // vide la zone des post-it avant réaffichage
       board.innerHTML = "";
@@ -39,7 +41,7 @@ window.addEventListener("DOMContentLoaded", () => {
       // LOGIN OU LOGOUT
       // ======================
 
-      if (!data.user) {
+      if (data.user.role === "guest") {
 
         authDiv.innerHTML = `
           <form method="POST" action="/login">
@@ -95,7 +97,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // BOUTON SUPPRIMER
         // ======================
 
-        if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
+        if (data.user.role !== "guest" && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
           const btn = document.createElement("button");
           btn.textContent = "X";
@@ -110,7 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // ======================
         // BOUTON MODIFIER POST-IT
         // ======================
-        if (data.user && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
+        if (data.user.role !== "guest" && (data.user.id === msg.auteur_id ||data.user.role === "admin")) {
 
           const editBtn = document.createElement("button");
           editBtn.textContent = "✏️";
@@ -128,7 +130,8 @@ window.addEventListener("DOMContentLoaded", () => {
             await fetch("/modifier", {
               method: "POST",
               headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "CSRF-Token": csrfToken
               },
               body: JSON.stringify({
                 id: msg.id,
@@ -153,7 +156,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("mousedown", (e) => {
           // pas connecté interdit
-          if (!data.user) return;
+          if (data.user.role === "guest") return;
 
           //  pas propriétaire ET pas admin  interdit
           if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
@@ -192,7 +195,8 @@ window.addEventListener("DOMContentLoaded", () => {
             await fetch("/deplacer", {
               method: "POST",
               headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "CSRF-Token": csrfToken
               },
               body: JSON.stringify({
                 id: msg.id,
@@ -213,7 +217,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("touchstart", (e) => {
            //  pas connecté → interdit
-          if (!data.user) return;
+          if (data.user.role === "guest") return;
 
             // pas propriétaire ET pas admin → interdit
           if (data.user.id !== msg.auteur_id && data.user.role !== "admin") return;
@@ -241,7 +245,8 @@ window.addEventListener("DOMContentLoaded", () => {
             await fetch("/deplacer", {
               method: "POST",
               headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "CSRF-Token": csrfToken
               },
               body: JSON.stringify({
                 id: msg.id,
@@ -282,7 +287,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const res = await fetch("/ajouter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "CSRF-Token": csrfToken },
         body: JSON.stringify({
           texte,
           x: e.pageX,
@@ -322,7 +327,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
       await fetch("/effacer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "CSRF-Token": csrfToken },
         body: JSON.stringify({ id })
       });
 

@@ -1,12 +1,14 @@
 // =============================
 // IMPORT DES MODULES
 // =============================
+require("dotenv").config();
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 //J’utilise express-session pour gérer l’authentification côté serveur.
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const rateLimit = require("express-rate-limit");
+const csrf = require("csurf"); //Le CSRF protège contre des actions effectuées à l’insu d’un utilisateur authentifié.
 const path = require("path");
 
 // =============================
@@ -70,6 +72,12 @@ const loginLimiter = rateLimit({
   max: 5,
   message: "Trop de tentatives, réessaie plus tard"
 });
+//limitation de nombre d'inscription
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: "Trop d'inscriptions, réessaie plus tard"
+});
 
 // Permet de lire les formulaires HTML
 app.use(express.urlencoded({ extended: true }));
@@ -86,11 +94,20 @@ app.use(
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: true
+    secure: process.env.NODE_ENV === "production"
     }
   })
 );
-
+const csrfProtection = csrf();
+//utilisateur guest qui correspond aux droits des utilisateurs non-connectés.
+const GUEST_USER = {
+  id: null,
+  username: "guest",
+  role: "guest",
+  can_create: 0,
+  can_edit: 0,
+  can_delete: 0
+};
 // =============================
 // MIDDLEWARE AVANCE
 // =============================
@@ -176,18 +193,23 @@ db.serialize(() => {
 
 //creation de admin
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin258"; 
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; 
 
 db.get("SELECT * FROM users WHERE username = ?", [ADMIN_USERNAME], async (err, user) => {
-  if (!user) {
-    const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  if (!ADMIN_PASSWORD) {
+    throw new Error("ADMIN_PASSWORD non défini !");
+  }
+  const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
+  if (!user) {
     db.run(
       "INSERT INTO users (username, password, role) VALUES (?, ?, 'admin')",
-      [ADMIN_USERNAME, hash],
-      () => {
-        console.log("Admin créé automatiquement");
-      }
+      [ADMIN_USERNAME, hash]
+    );
+  } else {
+    db.run(
+      "UPDATE users SET password = ? WHERE username = ?",
+      [hash, ADMIN_USERNAME]
     );
   }
 });
@@ -203,7 +225,7 @@ app.get("/signup", (req, res) => {
 
 //Les mots de passe sont hachés avec bcrypt avant stockage pour éviter qu’ils soient enregistrés en clair.
 // Inscription
-app.post("/signup", async (req, res) => {
+app.post("/signup", signupLimiter, async (req, res) => {
 
   const { username, password, board } = req.body;
   if(!username || !password){
@@ -240,11 +262,11 @@ app.post("/login", loginLimiter, (req, res) => {
     [username],
     async (err, user) => {
        //si lutilisateur n'existe pas
-      if (!user) return res.send("Utilisateur introuvable");
+      if (!user) return res.send("Identifiants incorrects");
 
       const match = await bcrypt.compare(password, user.password);
       //verifier le mot de passe
-      if (!match) return res.send("Mot de passe incorrect");
+      if (!match) return res.send("Identifiants incorrects");
         //stocker l'utilisateur dans la session
       req.session.user = user;
         //Rediriger vers la page principale
@@ -264,13 +286,19 @@ app.get("/logout", (req, res) => {
 // ROUTES API (AJAX)
 // =============================
 // Ajouter un post-it
-app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+app.post("/ajouter", csrfProtection, requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
   requirePermission("can_create"),//Vérifie que l'utilisateur a le droit de creer
   (req, res) => {
 
   const { texte, x, y, board_id } = req.body;
 
-  if (typeof x !== "number" || typeof y !== "number") {
+  const valid = Number.isInteger(x) && Number.isInteger(y) &&
+    x >= 0 &&
+    y >= 0 &&
+    x <= 5000 &&
+    y <= 5000;
+
+  if (!valid) {
     return res.json({ success: false });
   }
   
@@ -292,10 +320,13 @@ app.post("/ajouter",requireAuth,//Sécurité : empêche les utilisateurs non con
 });
 
 // Supprimer un post-it
-app.post("/effacer", requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+app.post("/effacer", csrfProtection, requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
   requirePermission("can_delete"),//Vérifie que l'utilisateur a le droit de supprimer
   (req, res) => {
   const { id } = req.body;
+  if (!Number.isInteger(id)) {
+    return res.json({ success: false });
+  }
   const user = req.session.user;
   // CAS ADMIN
   // Un administrateur peut supprimer n'importe quel post-it
@@ -344,9 +375,14 @@ app.get("/liste/:board", (req, res) => {
         console.error("ERREUR SQL :", err); // IMPORTANT
         return res.status(500).json({ error: err.message });
       }
+      let token = "";
+        try {
+            token = req.csrfToken();
+          } catch(e) {}
       res.json({
-        user: req.session.user || null,
-        messages: rows
+        user: req.session.user || GUEST_USER,
+        messages: rows,
+        csrfToken: token
       });
     }
   );
@@ -358,7 +394,7 @@ app.get("/liste/:board", (req, res) => {
 // =============================
 // MODIFIER UN POST-IT
 // =============================
-app.post("/modifier",requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
+app.post("/modifier", csrfProtection, requireAuth,//Sécurité : empêche les utilisateurs non connectés d'agir
   requirePermission("can_edit"),//Vérifie que l'utilisateur a le droit de modifier
   (req, res) => {
 
@@ -366,6 +402,9 @@ app.post("/modifier",requireAuth,//Sécurité : empêche les utilisateurs non co
 
   // Récupération des données envoyées en AJAX
   const { id, texte } = req.body;
+  if (!Number.isInteger(id)) {
+    return res.json({ success: false });
+  }
   const user = req.session.user;
 
   // Validation des données (évite bugs + abus)
@@ -438,7 +477,7 @@ app.get("/admin/users", requireAdmin, (req, res) => {
 // =============================
 // MODIFICATION DES DROITS UTILISATEUR
 // =============================
-app.post("/admin/permission", requireAdmin, (req, res) => {
+app.post("/admin/permission",csrfProtection, requireAdmin, (req, res) => {
 
   const { id, perm, value } = req.body;
 
@@ -458,7 +497,7 @@ app.post("/admin/permission", requireAdmin, (req, res) => {
 
 });
 
-app.post("/admin/role", requireAdmin, (req, res) => {
+app.post("/admin/role", csrfProtection, requireAdmin, (req, res) => {
 
   const { id, role } = req.body;
 
@@ -488,14 +527,24 @@ app.get("/", (req, res) => {
 // =============================
 // DEPLACER UN POST-IT
 // =============================
-app.post("/deplacer",
+app.post("/deplacer", csrfProtection,
   requireAuth,
   requirePermission("can_edit"),
   (req, res) => {
 
     const { id, x, y } = req.body;
 
-    if (typeof x !== "number" || typeof y !== "number") {
+    if (!Number.isInteger(id)) {
+      return res.json({ success: false });
+    }
+
+    const valid = Number.isInteger(x) && Number.isInteger(y) &&
+      x >= 0 &&
+      y >= 0 &&
+      x <= 5000 &&
+      y <= 5000;
+
+    if (!valid) {
       return res.json({ success: false });
     }
 
