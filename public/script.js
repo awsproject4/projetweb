@@ -278,6 +278,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // ======================
 
   board.addEventListener("dblclick", async (e) => {
+    if (data.user.role === "guest") {
+      alert("Vous devez être connecté pour créer un post-it");
+      return;
+    }
 
     const texte = prompt("Texte du post-it");
 
@@ -300,7 +304,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // si utilisateur non connecté
       if (!data.success) {
-        alert("Vous devez être connecté pour créer un post-it");
+        alert("Action refusée");
         return;
       }
 
