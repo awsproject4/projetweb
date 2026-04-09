@@ -360,7 +360,7 @@ app.post("/effacer", csrfProtection, requireAuth,//Sécurité : empêche les uti
 });
 
 // Liste des post-it
-app.get("/liste/:board", (req, res) => {
+app.get("/liste/:board",csrfProtection, (req, res) => {
   const board = req.params.board;
 
   db.all(

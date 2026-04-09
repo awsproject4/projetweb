@@ -34,6 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/liste/" + boardId);
       const data = await res.json();
       csrfToken = data.csrfToken;
+      console.log("CSRF TOKEN =", csrfToken);
       currentUser = data.user;
 
       // vide la zone des post-it avant réaffichage
@@ -302,8 +303,15 @@ window.addEventListener("DOMContentLoaded", () => {
         })
       });
 
-      const data = await res.json();
+      console.log("STATUS:", res.status);
 
+      if (!res.ok) {
+        alert("Erreur serveur : " + res.status);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("DATA:", data);
       // si utilisateur non connecté
       if (!data.success) {
         alert("Action refusée");
