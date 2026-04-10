@@ -85,7 +85,7 @@ app.use(express.urlencoded({ extended: true }));
 // Permet de servir les fichiers CSS et JS
 app.use(express.static("public"));
 // Gestion des sessions (authentification)
-app.set("trust proxy", 1);
+app.set("trust proxy", true);
 app.use(
   session({
   secret: process.env.SESSION_SECRET || "dev-secret",
@@ -93,7 +93,7 @@ app.use(
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
     secure: true
     }
   })
