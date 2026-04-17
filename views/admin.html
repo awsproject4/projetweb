@@ -26,111 +26,158 @@
 <script>
 
 // =============================
+// VARIABLES GLOBALES
+// =============================
+let csrfToken = "";
+
+// =============================
 // CHARGER LES UTILISATEURS
 // =============================
 async function loadUsers() {
 
-  const res = await fetch("/admin/users");
-  const users = await res.json();
+  try {
 
-  const tbody = document.getElementById("users");
-  tbody.innerHTML = "";
+    // 🔥 récupérer le CSRF token
+    const tokenRes = await fetch("/liste/default", {
+      credentials: "include"
+    });
+    const tokenData = await tokenRes.json();
+    csrfToken = tokenData.csrfToken;
 
-  users.forEach(u => {
+    // 🔥 récupérer les utilisateurs
+    const res = await fetch("/admin/users", {
+      credentials: "include"
+    });
+    const users = await res.json();
 
-    const row = document.createElement("tr");
+    const tbody = document.getElementById("users");
+    tbody.innerHTML = "";
 
-    // =============================
-    // USERNAME (SAFE)
-    // =============================
-    const tdUser = document.createElement("td");
-    tdUser.textContent = u.username;
+    users.forEach(u => {
 
-    // =============================
-    // ROLE
-    // =============================
-    const tdRole = document.createElement("td");
-    const select = document.createElement("select");
+      const row = document.createElement("tr");
 
-    const optionUser = document.createElement("option");
-    optionUser.value = "user";
-    optionUser.textContent = "User";
-    if (u.role === "user") optionUser.selected = true;
+      // =============================
+      // USERNAME
+      // =============================
+      const tdUser = document.createElement("td");
+      tdUser.textContent = u.username;
 
-    const optionAdmin = document.createElement("option");
-    optionAdmin.value = "admin";
-    optionAdmin.textContent = "Admin";
-    if (u.role === "admin") optionAdmin.selected = true;
+      // =============================
+      // ROLE
+      // =============================
+      const tdRole = document.createElement("td");
+      const select = document.createElement("select");
 
-    select.appendChild(optionUser);
-    select.appendChild(optionAdmin);
+      const optionUser = document.createElement("option");
+      optionUser.value = "user";
+      optionUser.textContent = "User";
+      if (u.role === "user") optionUser.selected = true;
 
-    select.onchange = () => setRole(u.id, select.value);
+      const optionAdmin = document.createElement("option");
+      optionAdmin.value = "admin";
+      optionAdmin.textContent = "Admin";
+      if (u.role === "admin") optionAdmin.selected = true;
 
-    tdRole.appendChild(select);
+      select.appendChild(optionUser);
+      select.appendChild(optionAdmin);
 
-    // =============================
-    // PERMISSIONS
-    // =============================
+      select.onchange = () => setRole(u.id, select.value);
 
-    function createCheckbox(permName, value) {
-      const td = document.createElement("td");
-      const checkbox = document.createElement("input");
+      tdRole.appendChild(select);
 
-      checkbox.type = "checkbox";
-      checkbox.checked = value;
+      // =============================
+      // CHECKBOX PERMISSIONS
+      // =============================
+      function createCheckbox(permName, value) {
+        const td = document.createElement("td");
+        const checkbox = document.createElement("input");
 
-      checkbox.onchange = () => {
-        setPerm(u.id, permName, checkbox.checked);
-      };
+        checkbox.type = "checkbox";
+        checkbox.checked = !!value;
 
-      td.appendChild(checkbox);
-      return td;
-    }
+        checkbox.onchange = () => {
+          setPerm(u.id, permName, checkbox.checked);
+        };
 
-    const tdCreate = createCheckbox("can_create", u.can_create);
-    const tdEdit = createCheckbox("can_edit", u.can_edit);
-    const tdDelete = createCheckbox("can_delete", u.can_delete);
+        td.appendChild(checkbox);
+        return td;
+      }
 
-    // =============================
-    // AJOUT À LA LIGNE
-    // =============================
-    row.appendChild(tdUser);
-    row.appendChild(tdRole);
-    row.appendChild(tdCreate);
-    row.appendChild(tdEdit);
-    row.appendChild(tdDelete);
+      const tdCreate = createCheckbox("can_create", u.can_create);
+      const tdEdit = createCheckbox("can_edit", u.can_edit);
+      const tdDelete = createCheckbox("can_delete", u.can_delete);
 
-    tbody.appendChild(row);
-  });
+      // =============================
+      // AJOUT À LA LIGNE
+      // =============================
+      row.appendChild(tdUser);
+      row.appendChild(tdRole);
+      row.appendChild(tdCreate);
+      row.appendChild(tdEdit);
+      row.appendChild(tdDelete);
+
+      tbody.appendChild(row);
+
+    });
+
+  } catch (err) {
+    console.error("Erreur chargement users :", err);
+  }
 }
 
 // =============================
 // CHANGER LE ROLE
 // =============================
 async function setRole(id, role) {
-  await fetch("/admin/role", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ id, role })
-  });
 
-  loadUsers();
+  try {
+
+    const res = await fetch("/admin/role", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "CSRF-Token": csrfToken
+      },
+      body: JSON.stringify({ id, role })
+    });
+
+    console.log("ROLE STATUS:", res.status);
+
+    loadUsers();
+
+  } catch (err) {
+    console.error("Erreur role :", err);
+  }
 }
 
 // =============================
 // CHANGER UNE PERMISSION
 // =============================
 async function setPerm(id, perm, value) {
-  await fetch("/admin/permission", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      id,
-      perm,
-      value
-    })
-  });
+
+  try {
+
+    const res = await fetch("/admin/permission", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "CSRF-Token": csrfToken
+      },
+      body: JSON.stringify({
+        id,
+        perm,
+        value
+      })
+    });
+
+    console.log("PERM STATUS:", res.status);
+
+  } catch (err) {
+    console.error("Erreur permission :", err);
+  }
 }
 
 // =============================
