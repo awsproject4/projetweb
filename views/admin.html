@@ -37,14 +37,14 @@ async function loadUsers() {
 
   try {
 
-    // 🔥 récupérer le CSRF token
+    // récupérer le CSRF token
     const tokenRes = await fetch("/liste/default", {
       credentials: "include"
     });
     const tokenData = await tokenRes.json();
     csrfToken = tokenData.csrfToken;
 
-    // 🔥 récupérer les utilisateurs
+    // récupérer les utilisateurs
     const res = await fetch("/admin/users", {
       credentials: "include"
     });
