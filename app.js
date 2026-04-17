@@ -69,7 +69,7 @@ app.use(express.json({ limit: "10kb" }));
 //limitation des tentatives de connexion (rate limiting)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 20,
   message: "Trop de tentatives, réessaie plus tard"
 });
 //limitation de nombre d'inscription
