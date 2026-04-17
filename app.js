@@ -480,7 +480,7 @@ app.get("/admin/users", requireAdmin, (req, res) => {
 // =============================
 app.post("/admin/permission", csrfProtection, requireAdmin, (req, res) => {
 
-  const { id, perm, value } = req.body;
+  let { id, perm, value } = req.body;
 
   const allowed = ["can_create", "can_edit", "can_delete"];
 
@@ -488,15 +488,18 @@ app.post("/admin/permission", csrfProtection, requireAdmin, (req, res) => {
     return res.json({ success: false });
   }
 
+  id = parseInt(id);
+
   db.run(
     `UPDATE users SET ${perm} = ? WHERE id = ?`,
     [value ? 1 : 0, id],
     function () {
 
-      // IMPORTANT : mettre à jour la session si c'est l'utilisateur connecté
-      if (req.session.user && req.session.user.id === id) {
-        req.session.user[perm] = value ? 1 : 0;
-      }
+      console.log("CHANGES:", this.changes);
+
+      db.get("SELECT * FROM users WHERE id = ?", [id], (err, user) => {
+        console.log("UPDATED USER:", user);
+      });
 
       res.json({ success: true });
     }
