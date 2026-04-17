@@ -100,7 +100,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // BOUTON SUPPRIMER
         // ======================
 
-        if (currentUser.role !== "guest" && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
+        if (currentUser.role !== "guest" && currentUser.can_delete && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
 
           const btn = document.createElement("button");
           btn.textContent = "X";
@@ -115,7 +115,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // ======================
         // BOUTON MODIFIER POST-IT
         // ======================
-        if (currentUser.role !== "guest" && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
+        if (currentUser.role !== "guest" && currentUser.can_edit && (currentUser.id === msg.auteur_id ||currentUser.role === "admin")) {
 
           const editBtn = document.createElement("button");
           editBtn.textContent = "✏️";
@@ -160,10 +160,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("mousedown", (e) => {
           // pas connecté interdit
-          if (currentUser.role === "guest") return;
-
           //  pas propriétaire ET pas admin  interdit
-          if (currentUser.id !== msg.auteur_id && currentUser.role !== "admin") return;
+          if (
+            currentUser.role === "guest" ||
+            !currentUser.can_edit ||
+            (currentUser.id !== msg.auteur_id && currentUser.role !== "admin")
+          ) return;
 
 
           // Empêche le drag si on clique sur bouton (delete/edit)
@@ -222,10 +224,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
         div.addEventListener("touchstart", (e) => {
            //  pas connecté → interdit
-          if (currentUser.role === "guest") return;
-
             // pas propriétaire ET pas admin → interdit
-          if (currentUser.id !== msg.auteur_id && currentUser.role !== "admin") return;
+          if (
+            currentUser.role === "guest" ||
+            !currentUser.can_edit ||
+            (currentUser.id !== msg.auteur_id && currentUser.role !== "admin")
+          ) return;
 
           const touch = e.touches[0];
 
@@ -284,8 +288,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // ======================
 
   board.addEventListener("dblclick", async (e) => {
-    if (!currentUser || currentUser.role === "guest") {
-      alert("Vous devez être connecté pour créer un post-it");
+    if (!currentUser || currentUser.role === "guest" || !currentUser.can_create) {
+      alert("Vous n'avez pas le droit de créer un post-it");
       return;
     }
 

@@ -478,22 +478,28 @@ app.get("/admin/users", requireAdmin, (req, res) => {
 // =============================
 // MODIFICATION DES DROITS UTILISATEUR
 // =============================
-app.post("/admin/permission",csrfProtection, requireAdmin, (req, res) => {
+app.post("/admin/permission", csrfProtection, requireAdmin, (req, res) => {
 
   const { id, perm, value } = req.body;
 
-  // securité: On limite les permissions modifiables pour éviter une injection SQL
   const allowed = ["can_create", "can_edit", "can_delete"];
 
   if (!allowed.includes(perm)) {
     return res.json({ success: false });
   }
 
-  // Mise à jour sécurisée
   db.run(
     `UPDATE users SET ${perm} = ? WHERE id = ?`,
     [value ? 1 : 0, id],
-    () => res.json({ success: true })
+    function () {
+
+      // IMPORTANT : mettre à jour la session si c'est l'utilisateur connecté
+      if (req.session.user && req.session.user.id === id) {
+        req.session.user[perm] = value ? 1 : 0;
+      }
+
+      res.json({ success: true });
+    }
   );
 
 });
